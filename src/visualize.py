@@ -32,13 +32,13 @@ def visualize_single_frame(r, unit_cell, out_path = None):
 
 
 
-def visualize_trajectory(job_dir, visualize_up_to = np.inf, visualize_every = 1):
+def visualize_trajectory(job_path, visualize_up_to = np.inf, visualize_every = 1):
 
-    frames_dir = os.path.join(job_dir, 'frames')
+    frames_dir = os.path.join(job_path, 'frames')
     if not os.path.exists(frames_dir):
         os.mkdir(frames_dir)
 
-    with open(os.path.join(job_dir, 'data.pkl'), 'rb') as f:
+    with open(os.path.join(job_path, 'data.pkl'), 'rb') as f:
         data = pickle.load(f)
     
     num_frames = min(data['r'].shape[0], visualize_up_to)
@@ -54,7 +54,7 @@ def visualize_trajectory(job_dir, visualize_up_to = np.inf, visualize_every = 1)
     return frame_paths
 
 
-def make_gif(frame_paths, out_path, fps=10):
+def make_gif(frame_paths, job_path, fps=10):
     """
     Creates a gif from a sequence of PNG frames.
 
@@ -65,14 +65,8 @@ def make_gif(frame_paths, out_path, fps=10):
     """
     
     frames = [imageio.imread(frame) for frame in frame_paths]
+    out_path = os.path.join(job_path, 'traj.gif')
     imageio.mimsave(out_path, frames, duration = 1000 / fps)
-
-
-# Example usage
-if __name__ == '__main__':
-    for i, dt in enumerate([0.01, 0.001, 0.0001, 0.00001]):
-        frame_paths = visualize_trajectory(f'./runs/dt_e-{i+1}/', visualize_up_to = 101)
-        make_gif(frame_paths, out_path = f'./runs/dt_e-{i+1}/data.gif')
 
 
 

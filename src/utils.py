@@ -52,19 +52,19 @@ def initialize_particles(temp : float,
     - v (np.ndarray): Particle velocities
     """
 
-
-    sigma = 0.001
+    x_pad = unit_cell[0] * 0.01
+    y_pad = unit_cell[1] * 0.01
     dx = initialization_lattice_cell[0]
     dy = initialization_lattice_cell[1]
-    Nx = int(unit_cell[0] / dx)
-    Ny = int(unit_cell[1] / dy)
+    Nx = int((unit_cell[0] - 2 * x_pad) / dx)
+    Ny = int((unit_cell[1] - 2 * y_pad) / dy)
     r = np.zeros((Nx, Ny, 2)) # (Nx, Ny, 2)
 
     for i in range(Nx):
         for j in range(Ny):
-            r[i, j, :] = (i * dx + sigma, j * dy + sigma)
+            r[i, j, :] = (i * dx + x_pad, j * dy + y_pad)
     
-
+    r = r
     r = r.reshape(Nx * Ny, 2) # (N, 2)
     r = check_pbc(r, unit_cell)
 
