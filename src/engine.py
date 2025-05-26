@@ -4,8 +4,8 @@ import os
 from functools import partial
 from abc import ABC, abstractmethod
 from tqdm import tqdm
-from potentials import Potential, LennardJones
-from utils import check_pbc, initialize_particles
+from src.potentials import Potential, LennardJones
+from src.utils import check_pbc, initialize_particles
 
 class Engine(ABC):
     def __init__(self):

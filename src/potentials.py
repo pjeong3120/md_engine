@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from utils import check_pbc, get_distance_matrices_pbc
+from src.utils import check_pbc, get_distance_matrices_pbc
 
 
 class Potential(ABC):
