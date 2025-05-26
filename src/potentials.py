@@ -29,6 +29,7 @@ class LennardJones(Potential):
         self.epsilon = epsilon
         self.unit_cell = unit_cell
         self.r_max = r_max
+        self.cutoff_energy = 4 * self.epsilon * ((self.sigma / r_max) ** 12 - (self.sigma / r_max) ** 6)
     
     def get_energy_forces(self, r):
         """
@@ -51,8 +52,8 @@ class LennardJones(Potential):
         mask = np.logical_and(distance_matrix < self.r_max, distance_matrix > 0)
 
         # Step 3 - potential energy
-        potential_energy = np.zeros_like(distance_matrix) # Fill with zeros - ignored terms should contribute zero 
-        potential_energy[mask] = 4 * self.epsilon * ((self.sigma / distance_matrix[mask]) ** 12 - (self.sigma / distance_matrix[mask]) ** 6)
+        potential_energy = np.zeros_like(distance_matrix) # Non-contributing terms
+        potential_energy[mask] =  4 * self.epsilon * ((self.sigma / distance_matrix[mask]) ** 12 - (self.sigma / distance_matrix[mask]) ** 6) - self.cutoff_energy
         potential_energy = potential_energy.sum(axis = 1)
 
         # Step 4 - forces
