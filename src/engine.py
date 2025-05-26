@@ -18,32 +18,45 @@ class Engine(ABC):
     def run(self, num_steps, save_every, out_dir = './runs', job_name = 'example_job'):
         num_saves = num_steps // save_every + 1
 
-        self.data = {'time' : np.zeros((num_saves, )), 
-                     'unit_cell' : self.unit_cell,
+        self.data = {'unit_cell' : self.unit_cell,
                      'masses' : self.masses,
+                     'time' : np.zeros((num_saves, )), 
                      'r' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])), # (T, N, 2)
                      'v' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])), # (T, N, 2)
                      'per_atom_pe' : np.zeros((num_saves, self.r.shape[0])), # (T, N)
-                     'per_atom_force' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])) # (T, N, 2)
+                     'per_atom_ke' : np.zeros((num_saves, self.r.shape[0])), # (T, N)
+                     'per_atom_force' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])), # (T, N, 2)
+                     'system_pe' : np.zeros((num_saves,)),  # (T)
+                     'system_ke' : np.zeros((num_saves,)),  # (T)
+                     'system_energy' : np.zeros((num_saves)) # (T)
                      }
 
-        potential_energy, forces =  self.potential.get_energy_forces(self.r)
+        system_pe, per_atom_pe, per_atom_forces =  self.potential.get_energy_forces(self.r)
+
         self.data['time'][0] = 0
         self.data['r'][0, :, :] = self.r
         self.data['v'][0, :, :] = self.v
-        self.data['per_atom_pe'][0, :] = potential_energy
-        self.data['per_atom_force'][0, :, :] = forces
-        
+        self.data['per_atom_pe'][0, :] = per_atom_pe
+        self.data['per_atom_ke'][0, :] = self.masses / 2 * (self.v**2).sum(axis = -1)
+        self.data['per_atom_force'][0, :, :] = per_atom_forces
+        self.data['system_pe'][0] = system_pe
+        self.data['system_ke'][0] = self.data['per_atom_ke'][0].sum()
+        self.data['system_energy'][0] = self.data['system_pe'][0] + self.data['system_ke'][0]
+
         for i in tqdm(range(1, num_steps + 1)):
-            r, v, potential_energy, forces = self.step()
+            r, v, system_pe, per_atom_pe, per_atom_forces = self.step()
             
             if i % save_every == 0:
                 idx = i // save_every
                 self.data['time'][idx] = i * self.dt
                 self.data['r'][idx, :, :] = self.r
                 self.data['v'][idx, :, :] = self.v
-                self.data['per_atom_pe'][idx, :] = potential_energy
-                self.data['per_atom_force'][idx, :, :] = forces
+                self.data['per_atom_pe'][idx, :] = per_atom_pe
+                self.data['per_atom_ke'][idx, :] = self.masses / 2 * (self.v**2).sum(axis = -1)
+                self.data['per_atom_force'][idx, :, :] = per_atom_forces
+                self.data['system_pe'][idx] = system_pe
+                self.data['system_ke'][idx] = self.data['per_atom_ke'][idx].sum()
+                self.data['system_energy'][idx] = self.data['system_pe'][idx] + self.data['system_ke'][idx]
 
         out_dir = os.path.join(out_dir, job_name)
         if not os.path.exists(out_dir):
@@ -79,11 +92,11 @@ class VerletEngine(Engine):
         Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
         """
 
-        potential_energy, forces =  self.potential.get_energy_forces(self.r)
-        self.v = self.v + forces * self.dt / 2 / self.masses[:, np.newaxis]
+        system_pe, per_atom_pe, per_atom_forces =  self.potential.get_energy_forces(self.r)
+        self.v = self.v + per_atom_forces * self.dt / 2 / self.masses[:, np.newaxis]
         self.r = self.r + self.v * self.dt 
         self.r = check_pbc(self.r, self.unit_cell)
-        potential_energy, forces = self.potential.get_energy_forces(self.r)
-        self.v = self.v + forces * self.dt / 2 / self.masses[:, np.newaxis]
+        system_pe, per_atom_pe, per_atom_forces =  self.potential.get_energy_forces(self.r)
+        self.v = self.v + per_atom_forces * self.dt / 2 / self.masses[:, np.newaxis]
 
-        return self.r, self.v, potential_energy, forces
+        return self.r, self.v, system_pe, per_atom_pe, per_atom_forces
