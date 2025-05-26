@@ -25,4 +25,4 @@ if __name__ == '__main__':
         save_every = 10 ** i
 
         engine = VerletEngine(r, v, masses, lj_potential, dt, unit_cell)
-        data = engine.run(num_steps, save_every, job_name = f'dt_e-{i+1}')
+        data = engine.run(num_steps, save_every, job_name = f'total_time_1000_dt_e-{i+2}')
