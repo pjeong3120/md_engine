@@ -5,10 +5,16 @@ from utils import check_pbc, get_distance_matrices_pbc
 
 class Potential(ABC):
     def __init__(self):
+        """
+        Potential parameterization
+        """
         super().__init__()
 
     @abstractmethod
     def get_energy_forces(self, r):
+        """
+        Forward call of the potential
+        """
         pass
 
 

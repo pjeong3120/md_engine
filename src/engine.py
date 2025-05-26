@@ -15,40 +15,6 @@ class Engine(ABC):
     def step(self):
         pass
 
-
-
-
-class VerletEngine(Engine):
-    def __init__(self,
-                 r0 : np.ndarray,
-                 v0 : np.ndarray,
-                 masses : np.ndarray,
-                 potential : Potential,
-                 dt : float,
-                 unit_cell : np.ndarray):
-        
-        self.r = r0.copy()
-        self.v = v0.copy()
-        self.masses = masses.copy()
-        self.potential = potential
-        self.dt = dt
-        self.unit_cell = unit_cell
-        
-
-    def step(self):
-        """
-        Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
-        """
-
-        potential_energy, forces =  self.potential.get_energy_forces(self.r)
-        self.v = self.v + forces * self.dt / 2 / self.masses[:, np.newaxis]
-        self.r = self.r + self.v * self.dt 
-        self.r = check_pbc(self.r, self.unit_cell)
-        potential_energy, forces = self.potential.get_energy_forces(self.r)
-        self.v = self.v + forces * self.dt / 2 / self.masses[:, np.newaxis]
-
-        return self.r, self.v, potential_energy, forces
-    
     def run(self, num_steps, save_every, out_dir = './runs', job_name = 'example_job'):
         num_saves = num_steps // save_every + 1
 
@@ -87,3 +53,37 @@ class VerletEngine(Engine):
             pickle.dump(self.data, file)
         
         return self.data
+
+
+
+
+class VerletEngine(Engine):
+    def __init__(self,
+                 r0 : np.ndarray,
+                 v0 : np.ndarray,
+                 masses : np.ndarray,
+                 potential : Potential,
+                 dt : float,
+                 unit_cell : np.ndarray):
+        
+        self.r = r0.copy()
+        self.v = v0.copy()
+        self.masses = masses.copy()
+        self.potential = potential
+        self.dt = dt
+        self.unit_cell = unit_cell
+        
+
+    def step(self):
+        """
+        Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
+        """
+
+        potential_energy, forces =  self.potential.get_energy_forces(self.r)
+        self.v = self.v + forces * self.dt / 2 / self.masses[:, np.newaxis]
+        self.r = self.r + self.v * self.dt 
+        self.r = check_pbc(self.r, self.unit_cell)
+        potential_energy, forces = self.potential.get_energy_forces(self.r)
+        self.v = self.v + forces * self.dt / 2 / self.masses[:, np.newaxis]
+
+        return self.r, self.v, potential_energy, forces
