@@ -36,7 +36,11 @@ if __name__ == '__main__':
         save_every = max(1, num_steps // 1000) # Save 1000 frames total
 
         engine = VerletEngine(r, v, masses, lj_potential, dt, unit_cell)
-        job_name = f'N={int(r.shape[0])}_totaltime={int(total_time)}_dt={i*2}e-4'
+        if i == 0:
+            job_name = f'N={int(r.shape[0])}_totaltime={int(total_time)}_dt=1e-4'
+        else:
+            job_name = f'N={int(r.shape[0])}_totaltime={int(total_time)}_dt={i*2}e-4'
+
         data = engine.run(num_steps, save_every, job_name = job_name)
 
         # Visualize Data 
