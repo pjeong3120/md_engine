@@ -14,7 +14,4 @@ def compute_traj_energy(data):
 
 
 if __name__ == '__main__':
-    job_dir = './runs/example_job'
-    with open(os.path.join(job_dir, 'data.pkl'), 'rb') as f:
-        data = pickle.load(f)
-    
+    pass

@@ -4,8 +4,9 @@ import os
 import imageio.v2 as imageio
 import glob
 from tqdm import tqdm
+import numpy as np
 
-# TRAJECTORY
+# TRAJECTORY UTILS
 def visualize_single_frame(r, unit_cell, out_path = None):
     """
     Visualizes a single frame from the particle positions
@@ -31,7 +32,7 @@ def visualize_single_frame(r, unit_cell, out_path = None):
 
 
 
-def visualize_trajectory(job_dir, visualize_every = 1):
+def visualize_trajectory(job_dir, visualize_up_to = np.inf, visualize_every = 1):
 
     frames_dir = os.path.join(job_dir, 'frames')
     if not os.path.exists(frames_dir):
@@ -40,7 +41,7 @@ def visualize_trajectory(job_dir, visualize_every = 1):
     with open(os.path.join(job_dir, 'data.pkl'), 'rb') as f:
         data = pickle.load(f)
     
-    num_frames = data['r'].shape[0] 
+    num_frames = min(data['r'].shape[0], visualize_up_to)
     unit_cell = data['unit_cell']
     frame_paths = []
     pad_width = len(str(num_frames - 1))
@@ -69,10 +70,9 @@ def make_gif(frame_paths, out_path, fps=10):
 
 # Example usage
 if __name__ == '__main__':
-    for i, dt in enumerate([0.01, 0.001, 0.0001]):
-        frame_paths = visualize_trajectory(f'./runs/dt_e-{i+1}/', visualize_every=(10 ** (i + 1)))
+    for i, dt in enumerate([0.01, 0.001, 0.0001, 0.00001]):
+        frame_paths = visualize_trajectory(f'./runs/dt_e-{i+1}/', visualize_up_to = 101)
         make_gif(frame_paths, out_path = f'./runs/dt_e-{i+1}/data.gif')
-
 
 
 
