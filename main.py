@@ -41,7 +41,7 @@ if __name__ == '__main__':
         else:
             job_name = f'N={int(r.shape[0])}_totaltime={int(total_time)}_dt={i*2}e-4'
 
-        data = engine.run(num_steps, save_every, job_name = job_name)
+        data = engine.run(num_steps, save_every, job_name = job_name)g
 
         # Visualize Data 
         frame_paths = visualize_trajectory(job_path=f'./runs/{job_name}', visualize_up_to = 101) # Visualize only 101 frames for runtime aka only the first 1 s
