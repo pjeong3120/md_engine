@@ -1,5 +1,7 @@
 import numpy as np
 
+k_B = 1
+
 
 def check_pbc(r : np.ndarray, unit_cell : np.ndarray):
     """
@@ -33,43 +35,63 @@ def get_distance_matrices_pbc(r : np.ndarray, unit_cell : np.ndarray):
 
 
 
-def initialize_particles(temp : float,
-                         unit_cell : np.ndarray,
-                         initialization_lattice_cell : np.ndarray
-                         ):
+def compute_temperature(masses : np.ndarray, v : np.ndarray):
     """
-    Initializes a regular lattice of particles across a unit_cell. 
-    TODO - do some math to figure out conversion between temp and <v^2>
+    Computes temperature from particle masses and velocities.
 
+    Parameters:
+    - masses: np.ndarray of shape (N,)
+    - velocities: np.ndarray of shape (N, d)
+    - k_B: Boltzmann constant (default in J/K)
+
+    Returns:
+    - temperature in Kelvin
+    """
+    kinetic_energy = 0.5 * np.sum(masses[:, np.newaxis] * v**2)
+    N, d = v.shape
+    temperature = (2 * kinetic_energy) / (N * d * k_B)
+    return temperature
+
+
+
+# Initialization schemes
+# Initialize with a target temperature and num_particles
+
+def initialize_n_particles_target_temp_2d(N : int,
+                                          masses : np.ndarray,
+                                          target_temp : float, 
+                                          unit_cell : np.ndarray):
+    """
+    Initialize a regular lattice of particles across a unit cell.
 
     Inputs:
-    - temp (float): standard deviation of initial velocity
-    - unit_cell (np.ndarray): Numpy vector with shape (d,) with rectangular unit cell lengths
-    - initialization_lattice_cell (np.ndarray): Distance between particles at t0
+    - Temp (float): Temperature of the system
+    - N (int): Number of simulated particles
+    - unit_cell (np.ndarray): A numpy vector with size (2,) specifying the dimensions of a rectangular unit cell
 
-    Outputs:
-    - r (np.ndarray): Particle Positions
-    - v (np.ndarray): Particle velocities
+    Returns:
+    - r (np.ndarray): Numpy vector with shape (N, 2) specifying uniformly distributed particle positions across the unit cell
+    - v (np.ndarray): NUmpy vector with shape (N, 2) specifying Boltzman distribution of particle velocities, parameterized by Temp
     """
 
-    x_pad = unit_cell[0] * 0.01
-    y_pad = unit_cell[1] * 0.01
-    dx = initialization_lattice_cell[0]
-    dy = initialization_lattice_cell[1]
-    Nx = int((unit_cell[0] - 2 * x_pad) / dx)
-    Ny = int((unit_cell[1] - 2 * y_pad) / dy)
-    r = np.zeros((Nx, Ny, 2)) # (Nx, Ny, 2)
+    # If N is a perfect square, Nx and Ny will be the same.
+    # Otherwise, Ny = Nx + 1 ie one more row
+    Nx = np.floor(np.sqrt(N))
+    Ny = np.ceil(np.sqrt(N))
 
-    for i in range(Nx):
-        for j in range(Ny):
-            r[i, j, :] = (i * dx + x_pad, j * dy + y_pad)
+    dx = unit_cell[0] / Nx
+    dy = unit_cell[1] / Ny
+
+    r = np.zeros((N, 2))
+
+    for i in range(N):
+        r[i, :] = ((i % Nx + 0.5) * dx, (i // Ny + 0.5) * dy)
     
-    r = r
-    r = r.reshape(Nx * Ny, 2) # (N, 2)
     r = check_pbc(r, unit_cell)
 
-    v = np.random.normal(loc = 0, scale = temp, size = r.shape)
-    # Ensure average velocity has mean=0 (ie no net flow) and std=temp (ie has specified temperature)
-    v = (v - v.mean(axis = 1, keepdims = True)) * temp / v.std()
+    v = np.random.normal(loc = 0, scale = 1.0, size = r.shape)
+    v = v - v.mean(axis=0, keepdims=True) # Remove any net velocity
+    temp = compute_temperature(masses, v)
+    v = v * np.sqrt(target_temp / temp) # 
     return r, v
 

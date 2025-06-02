@@ -5,23 +5,18 @@ from src.visualize import visualize_trajectory, make_gif
 from src.utils import k_B
 import numpy as np
 
-"""
-TODO - write main so that usage looks something like:
-python main.py --mode {simulate/visualize} --job_name $JOB_NAME --params
-
-"""
-
+import pickle, os, numpy as np
+from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
     np.random.seed(42)
     # Initialize Lattice
-    v_std = 2.5 # Standard deviation of velocity vector
-    unit_cell = np.array([10.0, 10.0]) # unit cell dimensions
-    initialization_lattice_cell = np.array([1.2, 1.2]) # distance between initialized particles
+    target_temp = 5 
+    N = 64
+    unit_cell = np.array([10, 10])
+    masses = np.ones((N,))
 
-    r0, v0 = initialize_n_particles_target_temp_2d(v_std, unit_cell, initialization_lattice_cell)
-    masses = np.ones((r0.shape[0],))
-
+    r0, v0 = initialize_n_particles_target_temp_2d(N, masses, target_temp, unit_cell)
 
     # Parameterize potential
     r_max = 5.0
@@ -43,7 +38,7 @@ if __name__ == '__main__':
         else:
             job_name = f'N={int(r.shape[0])}_totaltime={int(total_time)}_dt={i*2}e-4'
 
-        data = engine.run(num_steps, save_every, job_name = job_name)g
+        data = engine.run(num_steps, save_every, job_name = job_name)
 
         # Visualize Data 
         frame_paths = visualize_trajectory(job_path=f'./runs/{job_name}', visualize_up_to = 101) # Visualize only 101 frames for runtime aka only the first 1 s

@@ -11,7 +11,7 @@ class Potential(ABC):
         super().__init__()
 
     @abstractmethod
-    def get_energy_forces(self, r):
+    def get_energy_force(self, r):
         """
         Forward call of the potential
         """
@@ -31,7 +31,7 @@ class LennardJones(Potential):
         self.r_max = r_max
         self.cutoff_energy = 4 * self.epsilon * ((self.sigma / r_max) ** 12 - (self.sigma / r_max) ** 6)
     
-    def get_energy_forces(self, r):
+    def get_energy_force(self, r):
         """
         Computes the per atom potential energy and force.
         Periodic boundary conditions are applied when computing energies and forces
@@ -64,15 +64,15 @@ class LennardJones(Potential):
 
 
         # Step 4 - forces
-        per_atom_forces = np.zeros_like(displacement_tensor)
-        per_atom_forces[mask] = 24 * self.epsilon * ((
+        per_atom_force = np.zeros_like(displacement_tensor)
+        per_atom_force[mask] = 24 * self.epsilon * ((
                 2 * (self.sigma / distance_matrix[mask]) ** 12 - 
                 (self.sigma / distance_matrix[mask]) ** 6
                 ) / (distance_matrix[mask] ** 2)
             )[:, np.newaxis] * displacement_tensor[mask]
-        per_atom_forces = per_atom_forces.sum(axis = 1) # Sum along all atoms j 
+        per_atom_force = per_atom_force.sum(axis = 1) # Sum along all atoms j 
 
-        return system_pe, per_atom_pe, per_atom_forces
+        return system_pe, per_atom_pe, per_atom_force
 
 
 
