@@ -25,6 +25,7 @@ class Engine(ABC):
 
         self.data = {'unit_cell' : self.unit_cell,
                      'masses' : self.masses,
+                     'potential' : self.potential,
                      'time' : np.zeros((num_saves, )), 
                      'r' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])), # (T, N, 2)
                      'v' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])), # (T, N, 2)

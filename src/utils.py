@@ -20,7 +20,7 @@ def get_distance_matrices_pbc(r : np.ndarray, unit_cell : np.ndarray):
     - unit_cell(np.ndarray): Numpy vector with shape (d,) containing the side lengths of the unit cell
 
     Returns:
-    - displacement_vectors (np.ndarray): Numpy tensor with shape (N, N, d). The entry at index [i, j, :] is equal to r[i] - r[j]
+    - displacement_tensor (np.ndarray): Numpy tensor with shape (N, N, d). The entry at index [i, j, :] is equal to r[i] - r[j]
     - distance_matrix (np.ndarray): Numpy tensor with shape (N, N, d). The entry at index[i, j] is the distane from r[i] to r[j]
     """
 
@@ -52,6 +52,32 @@ def compute_temperature(masses : np.ndarray, v : np.ndarray):
     temperature = (2 * kinetic_energy) / (N * d * k_B)
     return temperature
 
+
+def compute_pressure(masses : np.ndarray, 
+                     r : np.ndarray, 
+                     v : np.ndarray, 
+                     potential : 'Potential', 
+                     unit_cell : np.ndarray):
+    """
+    Virial expression for pressure. Found on page 351 of Limmer textbook
+    Note that the virial expression is only valid if the total forces sum to zero.
+    For a Lennard Jones potential, this holds because Fij = Fji
+    """
+    d = unit_cell.shape[0]
+    V = unit_cell.prod() 
+
+    # Computing KE terms
+    # m: (N,)
+    # v: (N, d)
+    ke_terms = (masses[:, np.newaxis] * v ** 2).sum()
+    
+    # Computing Virial Correction
+    # per_atom_forces: (N, d)
+    # r:  (N, d)
+    system_pe, per_atom_pe, per_atom_force = potential.get_energy_force(r)
+    virial_correction = (r * per_atom_force).sum() # r dot F
+
+    return (ke_terms + virial_correction) / (d * V)
 
 
 # Initialization schemes
