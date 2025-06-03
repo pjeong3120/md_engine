@@ -7,6 +7,51 @@ from tqdm import tqdm
 from src.potentials import Potential, LennardJones
 from src.utils import check_pbc, k_B
 
+
+# Initialization schemes
+# Initialize with a target temperature and num_particles
+
+def initialize_n_particles_target_temp_2d(N : int,
+                                          masses : np.ndarray,
+                                          target_temp : float, 
+                                          unit_cell : np.ndarray):
+    """
+    Initialize a regular lattice of particles across a unit cell.
+
+    Inputs:
+    - Temp (float): Temperature of the system
+    - N (int): Number of simulated particles
+    - unit_cell (np.ndarray): A numpy vector with size (2,) specifying the dimensions of a rectangular unit cell
+
+    Returns:
+    - r (np.ndarray): Numpy vector with shape (N, 2) specifying uniformly distributed particle positions across the unit cell
+    - v (np.ndarray): NUmpy vector with shape (N, 2) specifying Boltzman distribution of particle velocities, parameterized by Temp
+    """
+
+    # If N is a perfect square, Nx and Ny will be the same.
+    # Otherwise, Ny = Nx + 1 ie one more row
+    Nx = np.floor(np.sqrt(N))
+    Ny = np.ceil(np.sqrt(N))
+
+    dx = unit_cell[0] / Nx
+    dy = unit_cell[1] / Ny
+
+    r = np.zeros((N, 2))
+
+    for i in range(N):
+        r[i, :] = ((i % Nx + 0.5) * dx, (i // Ny + 0.5) * dy)
+    
+    r = check_pbc(r, unit_cell)
+
+    v = np.random.normal(loc = 0, scale = 1.0, size = r.shape)
+    v = v - v.mean(axis=0, keepdims=True) # Remove any net velocity
+    temp = compute_temperature(masses, v)
+    v = v * np.sqrt(target_temp / temp) # 
+    return r, v
+
+
+
+
 class Engine(ABC):
     def __init__(self):
         super().__init__()
