@@ -37,7 +37,7 @@ class Engine(ABC):
                      'system_energy' : np.zeros((num_saves)) # (T)
                      }
 
-        system_pe, per_atom_pe, per_atom_force =  self.potential.get_energy_force(self.r)
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
         self.system_pe = system_pe
         self.per_atom_pe = per_atom_pe
         self.per_atom_force = per_atom_force
@@ -99,11 +99,11 @@ class VerletEngine(Engine):
         Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
         """
 
-        system_pe, per_atom_pe, per_atom_force =  self.potential.get_energy_force(self.r)
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
         self.v = self.v + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
         self.r = self.r + self.v * self.dt 
         self.r = check_pbc(self.r, self.unit_cell)
-        system_pe, per_atom_pe, per_atom_force =  self.potential.get_energy_force(self.r)
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
         self.v = self.v + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
 
         self.system_pe = system_pe
@@ -132,7 +132,7 @@ class LangevinVerletEngine(Engine):
         self.T = T
     
     def step(self):
-        system_pe, per_atom_pe, per_atom_force =  self.potential.get_energy_force(self.r)
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
 
         a = per_atom_force / self.masses[:, np.newaxis]
 
@@ -145,7 +145,7 @@ class LangevinVerletEngine(Engine):
         self.v = self.v + per_atom_force * self.dt * a / 2
         self.r = self.r + self.v * self.dt
 
-        system_pe, per_atom_pe, per_atom_force =  self.potential.get_energy_force(self.r)
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
         a = per_atom_force / self.masses[:, np.newaxis]
         self.v = self.v + self.dt * a / 2
         self.v = self.v * a + r2

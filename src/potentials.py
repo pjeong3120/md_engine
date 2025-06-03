@@ -15,7 +15,14 @@ class Potential(ABC):
         """
         Forward call of the potential
         """
-        pass
+        N = r.shape[-2]
+        d = r.shape[-1]
+
+        system_pe = 0
+        per_atom_pe = np.zeros((N,))
+        per_atom_force = np.zeros((N, d))
+        atom_atom_force = np.zeros((N, N, d))
+        return system_pe, per_atom_pe, per_atom_force, atom_atom_force
 
 
 class LennardJones(Potential):
@@ -62,17 +69,16 @@ class LennardJones(Potential):
                                                           # energy is equal to the sum over PAIRS, not atoms. 
                                                           # See note below for a deeper explanation
 
-
         # Step 4 - forces
-        per_atom_force = np.zeros_like(displacement_tensor)
-        per_atom_force[mask] = 24 * self.epsilon * ((
+        atom_atom_force = np.zeros_like(displacement_tensor) # (N, N, d)
+        atom_atom_force[mask] = 24 * self.epsilon * ((
                 2 * (self.sigma / distance_matrix[mask]) ** 12 - 
                 (self.sigma / distance_matrix[mask]) ** 6
                 ) / (distance_matrix[mask] ** 2)
             )[:, np.newaxis] * displacement_tensor[mask]
-        per_atom_force = per_atom_force.sum(axis = 1) # Sum along all atoms j 
+        per_atom_force = atom_atom_force.sum(axis = 1) # Sum along all atoms j 
 
-        return system_pe, per_atom_pe, per_atom_force
+        return system_pe, per_atom_pe, per_atom_force, atom_atom_force
 
 
 

@@ -31,10 +31,9 @@ if __name__ == '__main__':
         masses = np.ones((N,))
         r, v = initialize_n_particles_target_temp_2d(N, masses, target_temp, unit_cell)
 
-
         engine = VerletEngine(r, v, masses, lj_potential, dt, unit_cell)
         
-        job_name = f'N={int(N)}'
+        job_name = f'density_screens/N={int(N)}'
         data = engine.run(num_steps, save_every, job_name = job_name)
 
         # Visualize Data 
