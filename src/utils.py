@@ -157,22 +157,22 @@ def compute_pressure(masses : np.ndarray,
     return (ke_terms + virial_correction) / (d * V)
 
 
-def compute_diffusion_coeff_r(time : np.ndarray, r : np.ndarray, include_entire_traj = False):
-    # Note that these will generally be wrong. There isn't a great way to compute 
-    # 
-    d = r.shape[-1]
-    displacement = ((r[:,:,:] - r[0, :, :])**2).sum(axis = -1) # (T, N)
-    diffusion_coeffs = (displacement / time[:, np.newaxis]) / d
+def velocity_autocorrelation_function(v : np.ndarray, lag : int):
+    T = v.shape[0]
+    autocorrelation = (v[lag: , :, :] * v[:T-lag]).sum(axis = -1)
+    return autocorrelation.mean()    
 
-    if include_entire_traj:
-        return diffusion_coeffs.mean()
-    else:
-        return diffusion_coeffs[-1, :].mean()
 
-def compute_diffusion_coeff_v(time : np.ndarray, v : np.ndarray):
-    T, N, d = v.shape
-    
-    autocorrelation = (v[:, :, :] * v[0, :, :]).sum(axis = -1).sum(axis = -1) # First mean takes the autocorrelation. Second mean is over all particles
-    integral_autocorrelation = (autocorrelation * time[:]).sum() # Sum over all time
 
-    return integral_autocorrelation
+def compute_diffusion_coeff_v(v : np.ndarray, time : np.ndarray):
+    """
+    Computes the diffusion coefficient from a 
+    """
+    T = v.shape[0]
+    d = v.shape[2]
+    autocorrelations = np.zeros((T - 1,))
+    for i in range(T - 1):
+        autocorrelations[i] = (velocity_autocorrelation_function(v, i))
+
+    integral_autocorrelations = ((time[1:] - time[:-1]) * autocorrelations).sum()
+    return integral_autocorrelations / d
