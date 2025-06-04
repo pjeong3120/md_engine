@@ -79,7 +79,8 @@ class Engine(ABC):
                      'per_atom_force' : np.zeros((num_saves, self.r.shape[0], self.r.shape[1])), # (T, N, 2)
                      'system_pe' : np.zeros((num_saves,)),  # (T)
                      'system_ke' : np.zeros((num_saves,)),  # (T)
-                     'system_energy' : np.zeros((num_saves)) # (T)
+                     'system_energy' : np.zeros((num_saves)), # (T)
+                     'temperature' : np.zeros((num_saves)) # (T)
                      }
 
         system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
@@ -116,12 +117,9 @@ class Engine(ABC):
         self.data['system_pe'][idx] = self.system_pe
         self.data['system_ke'][idx] = self.data['per_atom_ke'][idx].sum()
         self.data['system_energy'][idx] = self.data['system_pe'][idx] + self.data['system_ke'][idx]
+        self.data['temperature'][idx] = compute_temperature(self.masses, self.v)
 
-
-
-
-
-class VerletEngine(Engine):
+class MicrocanonicalVerletEngine(Engine):
     def __init__(self,
                  r0 : np.ndarray,
                  v0 : np.ndarray,
@@ -143,21 +141,26 @@ class VerletEngine(Engine):
         """
         Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
         """
-
+        # Step 1: Velocity half step
         system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
         self.v = self.v + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        
+        # Step 2: Position step
         self.r = self.r + self.v * self.dt 
         self.r = check_pbc(self.r, self.unit_cell)
+        
+        # Step 3: Velocity half step
         system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
         self.v = self.v + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
 
+        # Update energies
         self.system_pe = system_pe
         self.per_atom_pe = per_atom_pe
         self.per_atom_force = per_atom_force
 
 
 
-class LangevinVerletEngine(Engine):
+class CanonicalVerletEngine(Engine):
     def __init__(self,
                  r0 : np.ndarray,
                  v0 : np.ndarray,
@@ -165,7 +168,8 @@ class LangevinVerletEngine(Engine):
                  potential : Potential,
                  dt : float,
                  unit_cell : np.ndarray,
-                 T : float):
+                 T : float,
+                 gamma : float):
         super().__init__()
 
         self.r = r0.copy()
@@ -175,27 +179,50 @@ class LangevinVerletEngine(Engine):
         self.dt = dt
         self.unit_cell = unit_cell
         self.T = T
+        self.gamma = gamma
+
+        self.a = np.exp(-gamma * dt / 2 / masses) # (N,)
+        self.noise_std = np.sqrt(k_B * T * (1 - self.a **2) / masses)[:, np.newaxis] # (N, 1)
+        # The new axis above allows us to broadcast later on when we sample. 
+        # This works: normal(loc = 0, scale = (N, 1), size = (N, d))
+        # This doesn't work: normal(loc = 0, scale = (N,), size = (N, d))
+
     
     def step(self):
-        system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
+        """
+        Canonical Verlet Algorithm, as described on Page 356 of Limmer textbook. 
+        The main difference between Canonical and Microcanonical is that at each 
+        time step, a friction term reduces velocity and a temperature term 
+        introduces a stochastic element so that the temperature remains constant.
 
-        a = per_atom_force / self.masses[:, np.newaxis]
+        a = exp(-gamma dt / 2m)
+        <R_{i, t}> = 0
+        <R_{i, t}, R_{j, t'} = (k_B * T)/m_i * (1 - a**2) delta_{ij} delta(t - t')
 
-        u1 = np.random.uniform(size = a.shape)
-        u2 = np.random.uniform(size = a.shape)
-        r1 = np.sqrt(k_B * self.T * (1 - a ** 2) / self.masses[:, np.newaxis] * (-2 * np.log(u1)) * np.cos(2 * np.pi * u2))
-        r2 = np.sqrt(k_B * self.T * (1 - a ** 2) / self.masses[:, np.newaxis] * (-2 * np.log(u1)) * np.sin(2 * np.pi * u2))
+        Some notes about R:
+        - Mean is 0 ie no net flow
+        - Variance is given as above. The delta functions simply guarantee that
+        the stochastic term is independent between for each unique molecule and
+        across time. 
+        """
 
-        self.v = self.v * a + r1
-        self.v = self.v + per_atom_force * self.dt * a / 2
-        self.r = self.r + self.v * self.dt
-
+        # Step 1: Velocity half step
+        R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
         system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
-        a = per_atom_force / self.masses[:, np.newaxis]
-        self.v = self.v + self.dt * a / 2
-        self.v = self.v * a + r2
+        self.v = self.v * self.a + R + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        
+        # Step 2: Position step
+        self.r = self.r + self.v * self.dt 
+        self.r = check_pbc(self.r, self.unit_cell)
+        
+        # Step 3: Velocity half step
+        R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
+        self.v = self.v * self.a + R + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
 
+        # Update energies
         self.system_pe = system_pe
         self.per_atom_pe = per_atom_pe
         self.per_atom_force = per_atom_force
+
         
