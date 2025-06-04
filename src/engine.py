@@ -5,7 +5,7 @@ from functools import partial
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 from src.potentials import Potential, LennardJones
-from src.utils import check_pbc, k_B
+from src.utils import check_pbc, k_B, compute_temperature
 
 
 # Initialization schemes
