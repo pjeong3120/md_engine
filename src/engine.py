@@ -30,8 +30,8 @@ def initialize_n_particles_target_temp_2d(N : int,
 
     # If N is a perfect square, Nx and Ny will be the same.
     # Otherwise, Ny = Nx + 1 ie one more row
-    Nx = np.floor(np.sqrt(N))
-    Ny = np.ceil(np.sqrt(N))
+    Nx = int(np.floor(np.sqrt(N)))
+    Ny = int(np.ceil(N / Nx))
 
     dx = unit_cell[0] / Nx
     dy = unit_cell[1] / Ny
@@ -39,7 +39,9 @@ def initialize_n_particles_target_temp_2d(N : int,
     r = np.zeros((N, 2))
 
     for i in range(N):
-        r[i, :] = ((i % Nx + 0.5) * dx, (i // Ny + 0.5) * dy)
+        r[i, :] = ((i % Nx + 0.5) * dx, (i // Nx + 0.5) * dy) # Taking i//Nx may look strange but it is correct. 
+                                                              # Try drawing a system with a nonsquare number 
+                                                              # of particles by hand to verify correctness
     
     r = check_pbc(r, unit_cell)
 
