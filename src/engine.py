@@ -83,11 +83,7 @@ class Engine(ABC):
                      'temperature' : np.zeros((num_saves)) # (T)
                      }
 
-        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
-        self.system_pe = system_pe
-        self.per_atom_pe = per_atom_pe
-        self.per_atom_force = per_atom_force
-
+        self.update_energy_force()
         self.update_data(0, 0)
         print(f"Beginning job {job_name}")
         for t in tqdm(range(1, num_steps + 1)):
@@ -106,6 +102,12 @@ class Engine(ABC):
         
         return self.data
     
+    def update_energy_force(self):
+        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
+        self.system_pe = system_pe
+        self.per_atom_pe = per_atom_pe
+        self.per_atom_force = per_atom_force
+
     
     def update_data(self, t, idx):
         self.data['time'][idx] = t * self.dt
@@ -142,21 +144,15 @@ class MicrocanonicalVerletEngine(Engine):
         Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
         """
         # Step 1: Velocity half step
-        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
-        self.v = self.v + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        self.v = self.v + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
         
         # Step 2: Position step
         self.r = self.r + self.v * self.dt 
         self.r = check_pbc(self.r, self.unit_cell)
         
         # Step 3: Velocity half step
-        system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
-        self.v = self.v + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
-
-        # Update energies
-        self.system_pe = system_pe
-        self.per_atom_pe = per_atom_pe
-        self.per_atom_force = per_atom_force
+        self.update_energy_force()
+        self.v = self.v + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
 
 
 
@@ -208,8 +204,7 @@ class CanonicalVerletEngine(Engine):
 
         # Step 1: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
-        system_pe, per_atom_pe, per_atom_force, atom_atom_force =  self.potential.get_energy_force(self.r)
-        self.v = self.v * self.a + R + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        self.v = self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
         
         # Step 2: Position step
         self.r = self.r + self.v * self.dt 
@@ -217,12 +212,6 @@ class CanonicalVerletEngine(Engine):
         
         # Step 3: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
-        system_pe, per_atom_pe, per_atom_force, atom_atom_force = self.potential.get_energy_force(self.r)
-        self.v = self.v * self.a + R + per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
-
-        # Update energies
-        self.system_pe = system_pe
-        self.per_atom_pe = per_atom_pe
-        self.per_atom_force = per_atom_force
-
+        self.update_energy_force()
+        self.v = self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
         
