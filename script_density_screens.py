@@ -1,12 +1,9 @@
-from src.utils import initialize_n_particles_target_temp_2d
 from src.potentials import LennardJones
-from src.engine import VerletEngine
+from src.engine import VerletEngine, initialize_n_particles_target_temp_2d
 from src.visualize import visualize_trajectory, make_gif
-from src.utils import k_B
 import numpy as np
 
 import pickle, os, numpy as np
-from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
     np.random.seed(42)
@@ -18,7 +15,7 @@ if __name__ == '__main__':
     # Parameterize potential
     r_max = 5.0
     sigma = 1.0
-    epsilon = 1.0
+    epsilon = 10
     lj_potential = LennardJones(sigma, epsilon, unit_cell, r_max)
     
     # Other engine params
@@ -27,7 +24,7 @@ if __name__ == '__main__':
     save_every = max(1, num_steps // 1000) # Save 1000 frames total
 
 
-    for N in [16, 25, 36, 49, 64, 81, 100]:
+    for N in [16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196]:
         masses = np.ones((N,))
         r, v = initialize_n_particles_target_temp_2d(N, masses, target_temp, unit_cell)
 

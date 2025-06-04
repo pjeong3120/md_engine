@@ -85,66 +85,48 @@ def compute_temperature(masses : np.ndarray, v : np.ndarray):
     return temperature
 
 
-
-def normalized_radial_density_function(r : np.ndarray, unit_cell : np.ndarray):
+def normalized_radial_density_function(r : np.ndarray, unit_cell : np.ndarray, num_bins):
     """
-    Computes the normalized radial density function g(r) under periodic boundary conditions.
-    See Exercise 5.12 in the Limmer textbook.
-
-    Parameters:
-    - r (np.ndarray): Particle positions, shape (N, d) or (T, N, d), where d is 2 or 3.
-    - unit_cell (np.ndarray): Side lengths of the rectangular unit cell, shape (d,)
-
-    Returns:
-    - distances (np.ndarray): Pairwise distances, shape (M,) or (T, M), with M = N(N-1)/2
-    - g (np.ndarray): Normalized radial density values, same shape as distances
+    Returns just the pairwise distances under PBC.
     """
 
     if r.ndim == 2:
         N, d = r.shape
         mask = np.triu_indices(N, k = 1)
-        displacements, distances = get_distance_matrices_pbc(r, unit_cell)
-        distances = distances[mask]
+        _, radii = get_distance_matrices_pbc(r, unit_cell)
+        radii = radii[mask]
 
     elif r.ndim == 3:
         T, N, d = r.shape
         mask = np.triu_indices(N, k = 1)
-        displacements, distances = get_distance_matrices_pbc(r, unit_cell)
-        assert distances.ndim == 3 and distances.shape[0] == T and distances.shape[1] == N and distances.shape[2] == N, f'{distances.shape}'
-        distances = distances[:, mask[0], mask[1]]
+        _, radii = get_distance_matrices_pbc(r, unit_cell)
+        radii = radii[:, mask[0], mask[1]]
+        radii = radii.reshape(-1)  # Flatten across time
     else:
-        raise ValueError(f"Unsupported input r shape {r.shape}; must be (N, d) or (T, N, d)")
-    
-    probabilities = 2 / (N * (N - 1)) # Each sample is equally likely => number of elements in the upper right triangle
+        raise ValueError(f"Unsupported input r shape {r.shape}")
+
     particle_density = N / unit_cell.prod()
 
-    if d == 2:
-        g = (N - 1) / (2 * np.pi * particle_density) * probabilities / distances 
-    elif d == 3:
-        g = (N - 1) / (4 * np.pi * particle_density) * probabilities / (distances ** 2)
-    else:
-        raise ValueError(f"Unsupported input r shape {r.shape}; last dim d must be 2 or 3")
-
-    return distances, g
-
-
-def binned_g(r : np.ndarray, unit_cell : np.ndarray, num_bins = 20, return_centers = True):
-    radii, g_lst = normalized_radial_density_function(r, unit_cell)
-    
     bin_length = radii.max() * 1.01 / num_bins
+    bin_edges = np.linspace(0, bin_length * num_bins, num_bins + 1)
     bin_indices = np.floor(radii / bin_length).astype(int)
     bin_indices = np.clip(bin_indices, 0, num_bins - 1)
 
-    bin_heights = np.zeros((num_bins,))
-    bin_heights[bin_indices] += g_lst
+    bin_counts = np.zeros(num_bins)
+    np.add.at(bin_counts, bin_indices, 1)  # Safer than +=
 
-    bin_edges = np.linspace(0, bin_length * num_bins, num_bins + 1)
+    bin_centers = bin_edges[:-1] + bin_length / 2
 
-    if return_centers:
-        bin_centers = bin_edges[:-1] + bin_length / 2
-        return bin_centers, bin_heights
+    if d == 2:
+        shell_area = 2 * np.pi * bin_centers * bin_length
+    elif d == 3:
+        shell_area = 4 * np.pi * bin_centers**2 * bin_length
+    else:
+        raise ValueError(f"Unsupported dimension d={d}")
 
-    return bin_edges, bin_heights
+    g = bin_counts / (shell_area * particle_density * N)  # Normalize
+
+    return bin_centers, g
 
 
 def compute_pressure(masses : np.ndarray, 
