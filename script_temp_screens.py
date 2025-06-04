@@ -1,5 +1,5 @@
 from src.potentials import LennardJones
-from src.engine import MicrocanonicalVerletEngine, CanonicalVerletEngine, initialize_n_particles_target_temp_2d
+from src.engine import CanonicalVerletEngine, initialize_n_particles_target_temp_2d
 from src.visualize import visualize_trajectory, make_gif
 import numpy as np
 

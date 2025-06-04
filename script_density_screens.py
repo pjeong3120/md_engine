@@ -1,5 +1,5 @@
 from src.potentials import LennardJones
-from src.engine import MicrocanonicalVerletEngine, initialize_n_particles_target_temp_2d
+from src.engine import CanonicalVerletEngine, initialize_n_particles_target_temp_2d
 from src.visualize import visualize_trajectory, make_gif
 import numpy as np
 
@@ -21,13 +21,14 @@ if __name__ == '__main__':
     dt = 0.001
     num_steps = int(10 / dt) # simulate for 10 seconds
     save_every = max(1, num_steps // 1000) # Save 1000 frames total
+    gamma = 1.0
 
 
-    for N in [16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196]:
+    for N in [16, 25, 36, 49, 64, 81, 85, 90, 95, 100, 105, 110, 115, 121]:
         masses = np.ones((N,))
         r, v = initialize_n_particles_target_temp_2d(N, masses, target_temp, unit_cell)
 
-        engine = MicrocanonicalVerletEngine(r, v, masses, lj_potential, dt, unit_cell)
+        engine = CanonicalVerletEngine(r, v, masses, lj_potential, dt, unit_cell, target_temp, gamma)
         
         job_name = f'density_screens/N={int(N)}'
         data = engine.run(num_steps, save_every, job_name = job_name)

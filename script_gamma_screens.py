@@ -1,5 +1,5 @@
 from src.potentials import LennardJones
-from src.engine import MicrocanonicalVerletEngine, CanonicalVerletEngine, initialize_n_particles_target_temp_2d
+from src.engine import CanonicalVerletEngine, initialize_n_particles_target_temp_2d
 from src.visualize import visualize_trajectory, make_gif
 import numpy as np
 
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     save_every = max(1, num_steps // 1000) # Save 1000 frames total
 
 
-    for gamma in [0.001, 0.01, 0.1, 1.0, 10, 100]:
+    for gamma in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10, 100]:
         
         r = r0.copy()
         v = v0.copy()
