@@ -3,7 +3,6 @@ from src.engine import MicrocanonicalVerletEngine, initialize_n_particles_target
 from src.visualize import visualize_trajectory, make_gif
 import numpy as np
 
-
 if __name__ == '__main__':
     np.random.seed(42)
     # Initialize Lattice
@@ -16,21 +15,24 @@ if __name__ == '__main__':
 
     # Parameterize potential
     r_max = 5.0
-    sigma = 1.0
     epsilon = 1.0
-    lj_potential = LennardJones(sigma, epsilon, unit_cell, r_max)
 
     # screen through dt - energy.std() = dt^2
     total_time = 10
-    for i, dt in enumerate([0.0001, 0.0002, 0.0004, 0.0006, 0.0008, 0.0010]):
+    dt = 0.001
+    num_steps = int(total_time / dt)
+    save_every = num_steps // 1000 # Save 1000 frames total
+
+
+    for i, sigma in enumerate([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]):
         r = r0.copy()
         v = v0.copy()
-        num_steps = int(total_time / dt)
-        save_every = max(1, num_steps // 1000) # Save 1000 frames total
+        
+        lj_potential = LennardJones(sigma, epsilon, unit_cell, r_max)
 
         engine = MicrocanonicalVerletEngine(r, v, masses, lj_potential, dt, unit_cell)
-
-        job_name = f'time_screens/totaltime=10_dt={int(dt * 10_000)}e-4'
+        
+        job_name = f'sigma_screens/N={N}_sigma={sigma:.3g}'
 
         data = engine.run(num_steps, save_every, job_name = job_name)
 

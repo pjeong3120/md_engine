@@ -1,5 +1,5 @@
 from src.potentials import LennardJones
-from src.engine import MicrocanonicalVerletEngine, initialize_n_particles_target_temp_2d
+from src.engine import MicrocanonicalVerletEngine, CanonicalVerletEngine, initialize_n_particles_target_temp_2d
 from src.visualize import visualize_trajectory, make_gif
 import numpy as np
 
@@ -22,18 +22,22 @@ if __name__ == '__main__':
 
     # screen through dt - energy.std() = dt^2
     total_time = 10
-    for i, dt in enumerate([0.0001, 0.0002, 0.0004, 0.0006, 0.0008, 0.0010]):
+    dt = 0.0010
+    num_steps = int(total_time / dt)
+    save_every = max(1, num_steps // 1000) # Save 1000 frames total
+
+
+    for gamma in [0.001, 0.01, 0.1, 1.0, 10, 100]:
+        
         r = r0.copy()
         v = v0.copy()
-        num_steps = int(total_time / dt)
-        save_every = max(1, num_steps // 1000) # Save 1000 frames total
+        
+        engine = CanonicalVerletEngine(r, v, masses, lj_potential, dt, unit_cell, target_temp, gamma)
 
-        engine = MicrocanonicalVerletEngine(r, v, masses, lj_potential, dt, unit_cell)
-
-        job_name = f'time_screens/totaltime=10_dt={int(dt * 10_000)}e-4'
+        job_name = f'gamma_screens/gamma={gamma}'
 
         data = engine.run(num_steps, save_every, job_name = job_name)
-
+        print(data['temp'])
         # Visualize Data 
         frame_paths = visualize_trajectory(job_path=f'./runs/{job_name}', visualize_up_to = 101) # Visualize only 101 frames for runtime aka only the first 1 s
         make_gif(frame_paths, job_path = f'./runs/{job_name}')

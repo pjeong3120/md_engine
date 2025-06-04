@@ -1,9 +1,8 @@
 from src.potentials import LennardJones
-from src.engine import VerletEngine, initialize_n_particles_target_temp_2d
+from src.engine import MicrocanonicalVerletEngine, initialize_n_particles_target_temp_2d
 from src.visualize import visualize_trajectory, make_gif
 import numpy as np
 
-import pickle, os, numpy as np
 
 if __name__ == '__main__':
     np.random.seed(42)
@@ -28,7 +27,7 @@ if __name__ == '__main__':
         masses = np.ones((N,))
         r, v = initialize_n_particles_target_temp_2d(N, masses, target_temp, unit_cell)
 
-        engine = VerletEngine(r, v, masses, lj_potential, dt, unit_cell)
+        engine = MicrocanonicalVerletEngine(r, v, masses, lj_potential, dt, unit_cell)
         
         job_name = f'density_screens/N={int(N)}'
         data = engine.run(num_steps, save_every, job_name = job_name)

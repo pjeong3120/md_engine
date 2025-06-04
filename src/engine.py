@@ -80,7 +80,7 @@ class Engine(ABC):
                      'system_pe' : np.zeros((num_saves,)),  # (T)
                      'system_ke' : np.zeros((num_saves,)),  # (T)
                      'system_energy' : np.zeros((num_saves)), # (T)
-                     'temperature' : np.zeros((num_saves)) # (T)
+                     'temp' : np.zeros((num_saves)) # (T)
                      }
 
         self.update_energy_force()
@@ -119,7 +119,7 @@ class Engine(ABC):
         self.data['system_pe'][idx] = self.system_pe
         self.data['system_ke'][idx] = self.data['per_atom_ke'][idx].sum()
         self.data['system_energy'][idx] = self.data['system_pe'][idx] + self.data['system_ke'][idx]
-        self.data['temperature'][idx] = compute_temperature(self.masses, self.v)
+        self.data['temp'][idx] = compute_temperature(self.masses, self.v)
 
 class MicrocanonicalVerletEngine(Engine):
     def __init__(self,
@@ -177,11 +177,8 @@ class CanonicalVerletEngine(Engine):
         self.T = T
         self.gamma = gamma
 
-        self.a = np.exp(-gamma * dt / 2 / masses) # (N,)
-        self.noise_std = np.sqrt(k_B * T * (1 - self.a **2) / masses)[:, np.newaxis] # (N, 1)
-        # The new axis above allows us to broadcast later on when we sample. 
-        # This works: normal(loc = 0, scale = (N, 1), size = (N, d))
-        # This doesn't work: normal(loc = 0, scale = (N,), size = (N, d))
+        self.a = np.exp(-gamma * dt / 2 / masses[:, np.newaxis]) # (N, 1)
+        self.noise_std = np.sqrt(k_B * T * (1 - self.a **2) / masses[:, np.newaxis]) # (N, 1)
 
     
     def step(self):
