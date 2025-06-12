@@ -192,7 +192,7 @@ class CanonicalVerletEngine(Engine):
 
         a = exp(-gamma dt / 2m)
         <R_{i, t}> = 0
-        <R_{i, t}, R_{j, t'} = (k_B * T)/m_i * (1 - a**2) delta_{ij} delta(t - t')
+        <R_{i, t}, R_{j, t'}> = (k_B * T)/m_i * (1 - a**2) delta_{ij} delta(t - t')
 
         Some notes about R:
         - Mean is 0 ie no net flow
@@ -200,12 +200,12 @@ class CanonicalVerletEngine(Engine):
         the stochastic term is independent between for each unique molecule and
         across time. 
 
-        New v update: v = v + drag term + noise + force
+        New v update: v = drag term + noise + force
         """
 
         # Step 1: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape) # Random noise
-        self.v = self.v - (self.v * self.a) + (R)+ (self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis])
+        self.v = (self.v * self.a) + (R)+ (self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis])
         
         # Step 2: Position step
         self.r = self.r + self.v * self.dt 
@@ -214,5 +214,4 @@ class CanonicalVerletEngine(Engine):
         # Step 3: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
         self.update_energy_force()
-        self.v = self.v - (self.v * self.a) + (R)+ (self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis])
-        
+        self.v = (self.v * self.a) + (R)+ (self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis])
