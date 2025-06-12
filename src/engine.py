@@ -143,7 +143,7 @@ class MicrocanonicalVerletEngine(Engine):
 
     def step(self):
         """
-        Updates the particle positions (r) and velocities (v) according to a Verlet integration step.
+        Verlet Integration, NVE
         """
         # Step 1: Velocity half step
         self.v = self.v + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
@@ -203,7 +203,7 @@ class CanonicalVerletEngine(Engine):
 
         # Step 1: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
-        self.v = self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        self.v = -self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
         
         # Step 2: Position step
         self.r = self.r + self.v * self.dt 
@@ -212,5 +212,5 @@ class CanonicalVerletEngine(Engine):
         # Step 3: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
         self.update_energy_force()
-        self.v = self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        self.v = -self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
         
