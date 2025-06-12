@@ -199,11 +199,13 @@ class CanonicalVerletEngine(Engine):
         - Variance is given as above. The delta functions simply guarantee that
         the stochastic term is independent between for each unique molecule and
         across time. 
+
+        New v update: v = v + drag term + noise + force
         """
 
         # Step 1: Velocity half step
-        R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
-        self.v = -self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape) # Random noise
+        self.v = self.v - (self.v * self.a) + (R)+ (self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis])
         
         # Step 2: Position step
         self.r = self.r + self.v * self.dt 
@@ -212,5 +214,5 @@ class CanonicalVerletEngine(Engine):
         # Step 3: Velocity half step
         R = np.random.normal(loc = 0, scale = self.noise_std, size = self.v.shape)
         self.update_energy_force()
-        self.v = -self.v * self.a + R + self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis]
+        self.v = self.v - (self.v * self.a) + (R)+ (self.per_atom_force * self.dt / 2 / self.masses[:, np.newaxis])
         
