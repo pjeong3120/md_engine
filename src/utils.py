@@ -2,9 +2,7 @@
 General use utility functions for molecular dynamics simulations. 
 These functions support numpy tensors with shape (N, d) or (T, N, d), where 
 N is the number of particles, d is the number of spatial dimensions, and T is the number of time steps.
-
 """
-
 
 import numpy as np
 
@@ -53,7 +51,48 @@ def get_distance_matrices_pbc(r : np.ndarray, unit_cell : np.ndarray):
 """
 Thermodynamic and stat-mech properties
 """
+def bin_values(values : np.ndarray, 
+        num_bins : int, 
+        return_edges = False):
+    """
+    Helper function for converting an array of values into a distribution.
 
+    Parameters:
+    - values (np.ndarray): Numpy array with shape (N,)
+    - num_bins (int): Number of bins
+    - return_edges (bool, default = False): Whether to return bin edges or bin centers.
+        For most purposes, including plotting, bin centers is more useful. 
+
+    Returns:
+    - bin_centers or bin_edges (np.ndarray): Self explanatory. Shape is (num_bins,) for 
+    bin_centers and (num_bins + 1,) for bin_edges
+    - bin_heights (np.ndarray): The total number of elements in each bin. bin_heights is
+        not normalized.
+    """
+    
+    if values.ndim != 1:
+        raise ValueError(f"Unsupported input values ndim: {values.ndim}. Only supports vectors")
+    
+    # Step 1: Compute the bin length, bin edges, and the bin that each value belongs to.
+    # TODO - check if behavior is the same for (N,)
+    bin_length = (values.max() - values.min()) / num_bins
+    bin_edges = np.linspace(values.min(), bin_length * num_bins, num_bins + 1)
+
+    # Step 2: Compute which bin each value belongs to
+    bin_indices = np.floor((values - values.min()) / bin_length).astype(int)
+    bin_indices = np.clip(bin_indices, 0, num_bins - 1) # Guarantees that we don't run into indexing issues for values.max().
+    
+    # Step 3: Compute bin heights
+    bin_heights = np.zeros(num_bins)
+    np.add.at(bin_heights, bin_indices, 1)  # Safer than +=
+
+    # Step 4: Return
+    if return_edges:
+        return bin_edges, bin_heights
+    
+    bin_centers = bin_edges[:-1] + bin_length / 2
+
+    return bin_centers, bin_heights
 
 def compute_temperature(masses : np.ndarray, v : np.ndarray):
     """
@@ -67,7 +106,8 @@ def compute_temperature(masses : np.ndarray, v : np.ndarray):
     
     Returns:
     - temperature (float): Temperature of system. If v has shape (T, N, d), this returns
-      an array with shape (T,) with temperatures across all time steps. 
+      an array with shape (T,) with temperatures across all time steps. Otherwise, it
+      returns a single float. 
     """
 
     if v.ndim == 2: # (N, d)
@@ -85,11 +125,22 @@ def compute_temperature(masses : np.ndarray, v : np.ndarray):
     return temperature
 
 
-def normalized_radial_density_function(r : np.ndarray, unit_cell : np.ndarray, num_bins):
+def normalized_radial_density_function(r : np.ndarray, 
+                                       unit_cell : np.ndarray, 
+                                       num_bins : int):
     """
-    Returns just the pairwise distances under PBC.
-    """
+    Computes g(r), which is the normalized density function. Returns the centers and heights
+    of a histogram containing the binned g distribution. 
 
+    Parameters:
+    - r (np.ndarray): Array of shape (N, d) or (T, N, d), containing the positions of N particles. 
+    - unit_cell (np.ndarray): side lengths of rectangular unit cell
+
+    Returns:
+    bin_centers (np.ndarray): 
+    g (np.ndarray): 
+    """
+    # Step 1: Compute P(R)
     if r.ndim == 2:
         N, d = r.shape
         mask = np.triu_indices(N, k = 1)
@@ -104,19 +155,19 @@ def normalized_radial_density_function(r : np.ndarray, unit_cell : np.ndarray, n
         radii = radii.reshape(-1)  # Flatten across time
     else:
         raise ValueError(f"Unsupported input r shape {r.shape}")
+    
+    mask = radii < (unit_cell.min() / 2)  # It only makes sense to compute it up to r=L/2 since greater 
+                                          # than that the particles interact with themselves through the periodic image.
+    radii = radii[mask]
 
+    bin_centers, bin_heights = bin(radii, num_bins = num_bins)
+    bin_length = bin_centers[1] - bin_centers[0]
+    P_R = bin_heights / bin_heights.sum()  # Normalize to probability P(R)
+
+    # Step 2: particle density 
     particle_density = N / unit_cell.prod()
 
-    bin_length = radii.max() * 1.01 / num_bins
-    bin_edges = np.linspace(0, bin_length * num_bins, num_bins + 1)
-    bin_indices = np.floor(radii / bin_length).astype(int)
-    bin_indices = np.clip(bin_indices, 0, num_bins - 1)
-
-    bin_counts = np.zeros(num_bins)
-    np.add.at(bin_counts, bin_indices, 1)  # Safer than +=
-
-    bin_centers = bin_edges[:-1] + bin_length / 2
-
+    # Step 3: Compute shell area
     if d == 2:
         shell_area = 2 * np.pi * bin_centers * bin_length
     elif d == 3:
@@ -124,7 +175,8 @@ def normalized_radial_density_function(r : np.ndarray, unit_cell : np.ndarray, n
     else:
         raise ValueError(f"Unsupported dimension d={d}")
 
-    g = bin_counts / (shell_area * particle_density * N)  # Normalize
+    # Step 4: g = (N - 1) * P(R) / (shell_area * rho)
+    g = P_R * (mask.sum() -1) / (shell_area * particle_density)
 
     return bin_centers, g
 
