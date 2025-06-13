@@ -53,7 +53,9 @@ Thermodynamic and stat-mech properties
 """
 def bin_values(values : np.ndarray, 
         num_bins : int, 
-        return_edges = False):
+        return_edges = False,
+        bin_lims = None,
+        ):
     """
     Helper function for converting an array of values into a distribution.
 
@@ -62,6 +64,7 @@ def bin_values(values : np.ndarray,
     - num_bins (int): Number of bins
     - return_edges (bool, default = False): Whether to return bin edges or bin centers.
         For most purposes, including plotting, bin centers is more useful. 
+    - bin_lims (None or iteratble): bin_lims[1] is bin_max, bin_lims[0] is bin_min[1]
 
     Returns:
     - bin_centers or bin_edges (np.ndarray): Self explanatory. Shape is (num_bins,) for 
@@ -74,12 +77,15 @@ def bin_values(values : np.ndarray,
         raise ValueError(f"Unsupported input values ndim: {values.ndim}. Only supports vectors")
     
     # Step 1: Compute the bin length, bin edges, and the bin that each value belongs to.
-    # TODO - check if behavior is the same for (N,)
-    bin_length = (values.max() - values.min()) / num_bins
-    bin_edges = np.linspace(values.min(), values.max(), num_bins + 1)
+    if bin_lims is None:
+        bin_edges = np.linspace(values.min(), values.max(), num_bins + 1)
+    else:
+        bin_edges = np.linspace(bin_lims[0], bin_lims[1], num_bins + 1)
+        values = values[np.logical_and(values < bin_lims[1], values > bin_lims[0])]
 
     # Step 2: Compute which bin each value belongs to
-    bin_indices = np.floor((values - values.min()) / bin_length).astype(int)
+    bin_length = bin_edges[1] - bin_edges[0]
+    bin_indices = np.floor((values - bin_edges[0]) / bin_length).astype(int)
     bin_indices = np.clip(bin_indices, 0, num_bins - 1) # Guarantees that we don't run into indexing issues for values.max().
     
     # Step 3: Compute bin heights
@@ -127,7 +133,8 @@ def compute_temperature(masses : np.ndarray, v : np.ndarray):
 
 def normalized_radial_density_function(r : np.ndarray, 
                                        unit_cell : np.ndarray, 
-                                       num_bins : int):
+                                       num_bins : int,
+                                       bin_lims = None):
     """
     Computes g(r), which is the normalized density function. Returns the centers and heights
     of a histogram containing the binned g distribution. 
@@ -160,7 +167,7 @@ def normalized_radial_density_function(r : np.ndarray,
                                           # than that the particles interact with themselves through the periodic image.
     radii = radii[mask]
 
-    bin_centers, bin_heights = bin(radii, num_bins = num_bins)
+    bin_centers, bin_heights = bin_values(radii, num_bins = num_bins, bin_lims = bin_lims)
     bin_length = bin_centers[1] - bin_centers[0]
     P_R = bin_heights / bin_heights.sum()  # Normalize to probability P(R)
 
