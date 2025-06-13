@@ -3,4 +3,4 @@ src/.DS_Store
 
 runs/*
 *.png
-src/__pycache__/
+src/__pycache__/*
