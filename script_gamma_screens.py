@@ -28,7 +28,6 @@ if __name__ == '__main__':
 
 
     for gamma in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10, 100]:
-        
         r = r0.copy()
         v = v0.copy()
         
@@ -37,7 +36,6 @@ if __name__ == '__main__':
         job_name = f'gamma_screens/gamma={gamma}'
 
         data = engine.run(num_steps, save_every, job_name = job_name)
-        print(data['temp'])
         # Visualize Data 
         frame_paths = visualize_trajectory(job_path=f'./runs/{job_name}', visualize_up_to = 101) # Visualize only 101 frames for runtime aka only the first 1 s
         make_gif(frame_paths, job_path = f'./runs/{job_name}')

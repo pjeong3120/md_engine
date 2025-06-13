@@ -76,7 +76,7 @@ def bin_values(values : np.ndarray,
     # Step 1: Compute the bin length, bin edges, and the bin that each value belongs to.
     # TODO - check if behavior is the same for (N,)
     bin_length = (values.max() - values.min()) / num_bins
-    bin_edges = np.linspace(values.min(), bin_length * num_bins, num_bins + 1)
+    bin_edges = np.linspace(values.min(), values.max(), num_bins + 1)
 
     # Step 2: Compute which bin each value belongs to
     bin_indices = np.floor((values - values.min()) / bin_length).astype(int)
